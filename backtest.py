@@ -521,7 +521,7 @@
 
 
 
-
+# Modified backtest script with debug prints
 
 import MetaTrader5 as mt5
 import pandas as pd
@@ -540,7 +540,7 @@ if not mt5.initialize():
 print("Connected to MT5")
 
 # Define parameters
-symbol = "EURUSD"
+symbol = "GBPJPY"
 timeframe_H1 = mt5.TIMEFRAME_H1
 timeframe_M15 = mt5.TIMEFRAME_M15
 num_bars = 500  # Number of candles to fetch (adjust as needed)
@@ -592,6 +592,8 @@ def find_support_resistance(df, lookback):
             resistance_levels.append((df.index[i], df['high'].iloc[i]))  # Store time and price
     
     if support_levels and resistance_levels:
+        print(f"Latest Support Level: {support_levels[-1]}")  # Debug
+        print(f"Latest Resistance Level: {resistance_levels[-1]}")  # Debug
         return support_levels[-1], resistance_levels[-1]  # Return most recent support/resistance
     else:
         return None, None  # Return None if no levels found
@@ -625,6 +627,7 @@ def invalidate_zone(df, support, resistance, invalidate_threshold):
 # Function to check M15 confirmation
 def check_m15_confirmation(support, resistance, df_m15):
     latest_price = df_m15['close'].iloc[-1]
+    print(f"Latest M15 Price: {latest_price}")  # Debug
 
     # If price is at resistance, wait for a break of recent low
     if latest_price >= resistance[1]:
@@ -662,6 +665,7 @@ def backtest(symbol, start_date, end_date):
 
     # Calculate ATR for stop loss and take profit calculation using Pandas
     df_m15['ATR'] = calculate_atr(df_m15, atr_period)
+    print(f"ATR: {df_m15['ATR'].tail(10)}")  # Debug
 
     # Create progress bar
     for i in tqdm(range(1, len(df_h1)-1), desc="Processing data", unit="bars"):
@@ -720,8 +724,8 @@ def backtest(symbol, start_date, end_date):
     print(f"Sell TP: {sell_tps}, Sell SL: {sell_sls}")
 
 # Example run
-start_date = datetime(2024, 1, 1)
-end_date = datetime(2024, 2, 1)
+start_date = datetime(2024, 12, 30)
+end_date = datetime(2025, 2, 5)
 backtest(symbol, start_date, end_date)
 
 # Close the MT5 connection

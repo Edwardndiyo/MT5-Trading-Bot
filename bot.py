@@ -356,12 +356,13 @@ if not mt5.initialize():
 print("Connected to MT5")
 
 # Define parameters
-symbol = "GBPJPY"
+symbol = "GBPUSD"
 timeframe_H1 = mt5.TIMEFRAME_H1
 timeframe_M15 = mt5.TIMEFRAME_M15
 num_bars = 100  # Number of candles to fetch
 lookback = 20  # Lookback window for support/resistance
 invalidate_threshold = 3  # Number of consecutive candles for invalidation
+
 
 # Function to get historical data
 def get_data(symbol, timeframe, bars):
@@ -374,20 +375,38 @@ def get_data(symbol, timeframe, bars):
     return df
 
 # Function to identify support and resistance
+# def find_support_resistance(df, lookback):
+#     support_levels = []
+#     resistance_levels = []
+
+#     for i in range(lookback, len(df) - lookback):
+#         if df['low'].iloc[i] == min(df['low'].iloc[i - lookback:i + lookback]):
+#             support_levels.append((df.index[i], df['low'].iloc[i]))  # Store time and price
+#         if df['high'].iloc[i] == max(df['high'].iloc[i - lookback:i + lookback]):
+#             resistance_levels.append((df.index[i], df['high'].iloc[i]))  # Store time and price
+    
+#     if support_levels and resistance_levels:
+#         return support_levels[-1], resistance_levels[-1]  # Return most recent support/resistance
+#     else:
+#         return None, None  # Return None if no levels found
+
 def find_support_resistance(df, lookback):
     support_levels = []
     resistance_levels = []
 
     for i in range(lookback, len(df) - lookback):
-        if df['low'].iloc[i] == min(df['low'].iloc[i - lookback:i + lookback]):
-            support_levels.append((df.index[i], df['low'].iloc[i]))  # Store time and price
-        if df['high'].iloc[i] == max(df['high'].iloc[i - lookback:i + lookback]):
-            resistance_levels.append((df.index[i], df['high'].iloc[i]))  # Store time and price
-    
-    if support_levels and resistance_levels:
-        return support_levels[-1], resistance_levels[-1]  # Return most recent support/resistance
-    else:
-        return None, None  # Return None if no levels found
+        lowest_low = min(df['low'].iloc[i - lookback:i + lookback])
+        highest_high = max(df['high'].iloc[i - lookback:i + lookback])
+        
+        # Modify condition to allow support/resistance inside candle bodies
+        if df['low'].iloc[i] <= lowest_low * 1.002:  # Allow small deviation (wiggle room)
+            support_levels.append((df.index[i], df['low'].iloc[i]))
+        
+        if df['high'].iloc[i] >= highest_high * 0.998:  # Allow small deviation (wiggle room)
+            resistance_levels.append((df.index[i], df['high'].iloc[i]))
+
+    return support_levels[-1] if support_levels else None, resistance_levels[-1] if resistance_levels else None
+
 
 # Function to invalidate support/resistance if broken by consecutive candles
 def invalidate_zone(df, support, resistance, invalidate_threshold):
@@ -469,16 +488,19 @@ while True:
     df_h1 = get_data(symbol, timeframe_H1, num_bars)
     df_m15 = get_data(symbol, timeframe_M15, num_bars)
 
+    print(df_h1.head())  # Debugging: Check if data is loading correctly
+    print(df_m15.head())  # Debugging: Check if data is loading correctly
+
     if df_h1 is not None and df_m15 is not None:
         # Find support and resistance for both timeframes
         support_h1, resistance_h1 = find_support_resistance(df_h1, lookback)
         support_m15, resistance_m15 = find_support_resistance(df_m15, lookback)
         
         # Invalidate support/resistance if broken
-        if invalidate_zone(df_h1, support_h1, resistance_h1, invalidate_threshold):
-            support_h1, resistance_h1 = None, None  # Invalidate H1 zones
-        if invalidate_zone(df_m15, support_m15, resistance_m15, invalidate_threshold):
-            support_m15, resistance_m15 = None, None  # Invalidate M15 zones
+        # if invalidate_zone(df_h1, support_h1, resistance_h1, invalidate_threshold):
+        #     support_h1, resistance_h1 = None, None  # Invalidate H1 zones
+        # if invalidate_zone(df_m15, support_m15, resistance_m15, invalidate_threshold):
+        #     support_m15, resistance_m15 = None, None  # Invalidate M15 zones
         
         latest_price_h1 = df_h1['close'].iloc[-1]
         latest_price_m15 = df_m15['close'].iloc[-1]
